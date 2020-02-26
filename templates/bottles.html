@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+    <title>bottles be 99'n</title>
+    </head>
+<body>
+<script>
+        var drink = "Energy drink";
+        var lyrics = "";
+        var cans = 99;
+
+    while (cans > 0){
+        lyrics = lyrics + cans + "cans of"
+            + drink + "on the wall <br>";
+        lyrics = lyrics + cans + "cans of "
+            + drink + "<br>";
+        lyrics = lyrics + "take one down , pass it around, <br>";
+        if (cans > 1) {
+            lyrics = lyrics + (cans-1) + "cans of "
+            + drink + "on the wall <br>";
+        }
+        else {
+            lyrics = lyrics + "no more cans of cans of "
+                + drink + "on the wall <br>";
+        }
+
+        cans = cans - 1;
+    }
+    document.write(lyrics)
+</script>
+
+</body>
+</html>
