@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+{% extends "layout.html" %}
+
+{% block title %}
+    
+{% endblock %}
+
+{% block body %}
+    <div>
+        <ul>
+            <li>Title: {{bookinfo[0]['title']}}</li>
+            <li>Author: {{bookinfo[0]['author']}}</li>
+            <li>Year: {{bookinfo[0]['year']}}</li>
+            <li>ISBN: {{bookinfo[0]['isbn']}}</li>
+        </ul>
+    </div>
+    <div>
+        <!-- will need to have form for reviewing. 1-5 scale and text box to submit to database-->
+        <form action="{{url_for('submitreview', isbn=bookinfo[0]['isbn'])}}" method="POST">
+      
+            <div><input type="text" name = "rating" placeholder="     Enter rating (1-5)"></div>
+            
+            <div><textarea name = "textreview" placeholder="Write a review"></textarea></div>
+
+            <div><button class="btn btn-primary" type="submit">Submit</button></div>
+
+        </form>
+    </div>
+        <p> Average Goodreads Rating: {{ averageRating }}</p>
+        <p> Goodreads Rating Count: {{ ratingCount }}</p>
+    <div>
+        <!-- display reviews -->
+        {% for review in reviews %}
+        <!-- need to pass in isbn to pull off a query that routes to that page -->
+        <div>
+            <strong>Featured Review by {{ review['review_user'] }}</strong>
+        </div>
+        <div><p><i>{{ review['reviewtext']}}</i></p></div>
+        <div></div>
+        {% endfor %}
+
+
+    </div>
+{% endblock %}

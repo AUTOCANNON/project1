@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+
+{% block heading %}
+    Find a book!
+{% endblock %}
+
+{% block body %}
+<div>
+    <p>Please search for a book by ISBN, title, or author.</p>
+</div>
+
+<div>
+    <form action="/booksearch" method="POST">
+
+        <input type="text" name = "isbn" placeholder="Search by ISBN">
+        
+        <div>
+            <input type="text" name = "bookTitle" placeholder="Search by title">
+        </div>
+        <div>
+            <input type="text" name = "author" placeholder="Search by author">
+        </div>
+        <div>
+            <button class="btn btn-primary" type="submit">Search</button>
+        </div>
+
+    </form>
+</div>
+{% endblock %}
+

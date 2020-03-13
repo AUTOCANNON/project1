@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+
+{% block heading %}
+    Results
+{% endblock %}
+
+{% block body %}
+
+<div>
+    
+        {% for result in results %}
+        <!-- need to pass in isbn to pull off a query that routes to that page -->
+        <div>{{ result['title'] }} : {{result['author']}} <a href="/bookinspect/{{result['isbn']}}">Go to book</a></div>
+        {% endfor %}
+       
+</div>
+{% endblock %}
+

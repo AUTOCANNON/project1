@@ -7,9 +7,12 @@
     </head>
     <body>
         <h1>{{headline}}</h1>
-        
+        {% for message in get_flashed_messages() %} 
+            <div class=flash>{{ message }}</div>
+        {% endfor %}
+    <p>
         <div>
-            <a href="{{url_for('pickabook')}}">Find boook</a>
+            <a href="{{url_for('search')}}">Find boook</a>
         </div>
         <div>
             <a href="{{url_for('registration')}}">Register</a>
@@ -17,8 +20,17 @@
         <div>
             <a href="{{url_for('bottles')}}">Hear a song</a>
         </div>
-        <div>
-            <button class="btn btn-primary" type="submit">Login</button>
-        </div>
+       
+      
+        <form action="{{url_for('login')}}">
+            <input type="submit" value="Go to login" />
+        </form>
+
+        <form action="{{url_for('logout')}}">
+            <input type="submit" value="Go to logout" />
+        </form>
+       
+        
+    </p>
     </body>
 </html>

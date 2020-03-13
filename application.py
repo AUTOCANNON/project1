@@ -1,15 +1,16 @@
 import os
 
-from flask import Flask, session, render_template, request, flash
+from flask import Flask, session, render_template, request, flash, redirect, url_for
 from flask_session import Session
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import scoped_session, sessionmaker
+import json
 import requests
-res = requests.get("https://www.goodreads.com/book/review_counts.json", params={"key": "1acpsBDaZqg8qtyWk9BaA", "isbns": "9781632168146"})
+#res = requests.get("https://www.goodreads.com/book/review_counts.json", params={"key": "1acpsBDaZqg8qtyWk9BaA", "isbns": isbn})
 #print(res.json())
 
 app = Flask(__name__)
-
+app.secret_key = "eggsalad"
 
 
 # Check for environment variable
@@ -31,8 +32,14 @@ db = scoped_session(sessionmaker(bind=engine))
 
 @app.route("/")
 def index():
-    headline = "Welcome to the book app!"
+    if "user" in session:
+        user = session["user"]
+        headline = f"Welcome to bookapp {user}"
+    else:
+        headline = "Welcome to the bookapp"
     return render_template("index.html", headline = headline)
+
+    
 
 @app.route("/registration", methods=["POST","GET"])
 def registration():
@@ -60,40 +67,172 @@ def registration():
     return render_template("registration.html")
     # Start by getting form information
 
-@app.route("/login")
+@app.route("/login", methods=['POST','GET'])
 def login():
-<<<<<<< HEAD
     # Login will need to check that the user exists, and present an error if they don't.
     # If they do exist, then it will need to verify that they put in the right password.
     # Then it will need to create the session assign to that user.
+    session.pop("user", None)
 
 
+    if request.method == "POST":
+        userName = request.form.get("Email")
+        password = request.form.get("Password")
+        checkUsername = db.execute("SELECT user_name FROM registered_users WHERE user_name=(:userName)",
+                        {"userName":userName}).fetchone()
 
+        #return f"<h1>{checkData}</h1>"
+        
+        if checkUsername == None:
+            return render_template("error.html", message="User does not exist.")
+        else:
+            queriedPasswordResult = db.execute("SELECT password FROM registered_users WHERE user_name=(:userName)",
+                        {"userName":userName}).fetchone()
+            # Removes tuple garbage.
+            cleanedPassword = str(queriedPasswordResult)[2:-3]
 
+            if cleanedPassword != password:
+                return render_template("error.html", message="Incorrect password")
+            else:
+                session["user"] = userName
+                return redirect(url_for("index"))
+                
+    elif request.method == "GET":
+        return(render_template("login.html"))
+            
 
-
-
-=======
->>>>>>> 4aad453f1619afd28c9488f13d307f4a89a70a89
-    return(render_template("login.html"))
 
 @app.route("/bottles")
 def bottles():
     return(render_template("bottles.html"))
 
-@app.route("/pickabook")
-def pickabook():
-    return render_template("pickabook.html")
-<<<<<<< HEAD
+@app.route("/bookinspect/<isbn>", methods = ['GET'])
+def pickabook(isbn):
+    if request.method == "GET":
+        bookInfo = db.execute("SELECT isbn, title, author, year FROM books WHERE isbn like :isbn",
+                        {"isbn":isbn}).fetchall()
+        bookreviews = db.execute("SELECT reviewtext, review_user FROM book_reviews WHERE bookid like :isbn",
+                     {"isbn":isbn}).fetchall()
 
-=======
->>>>>>> 4aad453f1619afd28c9488f13d307f4a89a70a89
+        res = requests.get("https://www.goodreads.com/book/review_counts.json", params={"key": "1acpsBDaZqg8qtyWk9BaA", "isbns": isbn})
+        data = res.json()
+        avgRating = data["books"][0]["average_rating"]
+        ratingCount = data["books"][0]["ratings_count"]
+        
+        
+        return render_template("bookinspect.html",  bookinfo = bookInfo, reviews = bookreviews, averageRating = avgRating, ratingCount = ratingCount)
+
+    else:
+        return render_template("error.html")
+
+@app.route("/logout")
+def logout():
+    session.pop("user", None)
+    flash("Successfully logged out")
+    return render_template("index.html")
+
+@app.route("/booksearch", methods = ['POST','GET'])
+def search():
+    isbn = request.form.get("isbn")
+    bookTitle = request.form.get("bookTitle")    
+    author = request.form.get("author")
+    values = [isbn, bookTitle, author]
+    # do a check on data fields being filled before querying db.
+    if request.method == "POST":
+        if all(v == '' for v in values):
+            flash("You must enter information into a field.")
+            return render_template("search.html")
+        else:
+            # perform search
+            if isbn:
+                searchColumn = 'isbn'
+            elif bookTitle:
+                searchColumn = 'title'
+            elif author:
+                searchColumn = 'author'
+            searchKeyword = isbn or bookTitle.lower() or author.lower()
+            searchKeyword = searchKeyword + '%'
+            checkData = db.execute(f"SELECT isbn,title,author,year FROM books WHERE LOWER(author) LIKE :searchKeyword OR isbn LIKE :searchKeyword or LOWER(title) LIKE :searchKeyword", {"searchKeyword": searchKeyword }).fetchall()
+            # checkData is list of lists, need to extract out the 3rd element from each list
+            if checkData == []:
+                flash("No results found")
+                return render_template("search.html")
+            else:
+                return render_template("searchresults.html", results=checkData)
+    else:
+        return render_template("search.html")
+
+@app.route("/submitreview/<isbn>", methods=["POST"])
+def submitreview(isbn):
+    # will want to insert the users information into the DB. Will also need to check if that user already submitted
+    # a review for this book, so they can't insert a duplicate
+    if request.method == "POST":
+        if "user" in session:
+            rating = request.form.get("rating")
+            textReview = request.form.get("textreview")
+            uid = session.get("user")
+
+            # TODO check if both rating and reviewtext are filled out
+            if '' in [textReview,rating]:
+                flash("You must enter rating and review. Please search again")
+                return render_template("search.html")
+                return redirect("/bookinspect/ + isbn")
+            else:
+                reviewAlreadyExists = db.execute("SELECT bookid, user FROM book_reviews WHERE review_user = :uid and bookid = :isbn", {"uid":uid, "isbn": isbn}).fetchall()
+ 
+                if len(reviewAlreadyExists) > 0:
+                    return "<h1> you already made a review for this book </h1>"
+                else:
+                # Ensure user hasn't already submitted another review for the book
+                    db.execute("INSERT INTO book_reviews (bookid, review_user, rating, reviewtext) VALUES (:isbn, :uid, :rating, :textReview)",
+                                                {"isbn":isbn, 
+                                                "uid":uid,
+                                                "rating":rating,
+                                                "textReview":textReview})
+                    db.commit()
+                    
+                    bookInfo = db.execute("SELECT isbn, title, author, year FROM books WHERE isbn like :isbn",
+                        {"isbn":isbn}).fetchall()
+                    bookreviews = db.execute("SELECT reviewtext, review_user FROM book_reviews WHERE bookid like :isbn",
+                                {"isbn":isbn}).fetchall()
+
+                    res = requests.get("https://www.goodreads.com/book/review_counts.json", params={"key": "1acpsBDaZqg8qtyWk9BaA", "isbns": isbn})
+                    data = res.json()
+                    avgRating = data["books"][0]["average_rating"]
+                    ratingCount = data["books"][0]["ratings_count"]
+                    
+                    
+                    return render_template("bookinspect.html",  bookinfo = bookInfo, reviews = bookreviews, averageRating = avgRating, ratingCount = ratingCount)
+
+        else:
+            flash("You must login to submit reviews..")
+            return render_template("login.html")
+    else:
+        return "<h1>oopsie</h1>"
+
+@app.route("/api/<isbn>")
+def apirequest(isbn):
+    if request.method == "GET":
+        res = requests.get("https://www.goodreads.com/book/review_counts.json", params={"key": "1acpsBDaZqg8qtyWk9BaA", "isbns": isbn})
+        data = res.json()
+        formattedData = data["books"][0]
+
+        return render_template("apirequest.html", isbn = formattedData)
+        #avgRating = data["books"][0]["average_rating"]
+        #ratingCount = data["books"][0]["ratings_count"]
+    else:
+        abort(404)
 
 
-@app.route("/registrationSuccess", methods=["POST","GET"])
-def registrationMessage(email):
-    email = request.form.get("email")
-    # Code here will check if email exists in server, and conditionally return a success message if email is already in system or not
 
 
 
+
+    # {
+    #     "title": "Memory",
+    #     "author": "Doug Lloyd",
+    #     "year": 2015,
+    #     "isbn": "1632168146",
+    #     "review_count": 28,
+    #     "average_score": 5.0
+    # }
