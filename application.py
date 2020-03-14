@@ -1,13 +1,13 @@
 import os
 
-from flask import Flask, session, render_template, request, flash, redirect, url_for
+from flask import Flask, session, render_template, request, flash, redirect, url_for, jsonify
 from flask_session import Session
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import scoped_session, sessionmaker
 import json
 import requests
 #res = requests.get("https://www.goodreads.com/book/review_counts.json", params={"key": "1acpsBDaZqg8qtyWk9BaA", "isbns": isbn})
-#print(res.json())
+
 
 app = Flask(__name__)
 app.secret_key = "eggsalad"
@@ -217,16 +217,30 @@ def apirequest(isbn):
         data = res.json()
         formattedData = data["books"][0]
 
-        return render_template("apirequest.html", isbn = formattedData)
-        #avgRating = data["books"][0]["average_rating"]
-        #ratingCount = data["books"][0]["ratings_count"]
+        bookInfo = db.execute("SELECT isbn, title, author, year FROM books WHERE isbn like :isbn",
+                        {"isbn":isbn}).fetchall()
+        
+
+
+        queryResults = bookInfo[0]
+
+        rTitle = queryResults[1]
+        rAuthor = queryResults[2]
+        rYear = queryResults[3]
+        rIsbn = queryResults[0]
+        reviews_count = formattedData["reviews_count"]
+        average_score = formattedData["average_rating"]
+
+        apiRes = {"title":rTitle,"author":rAuthor,"year":rYear,"isbn":rIsbn,"review_count":reviews_count,"average_score":average_score}
+        
+        
+        #jsonRes = json.dumps(apiRes)
+        #return render_template("apirequest.html", r = jsonRes)
+
+        return jsonify(apiRes)
+
     else:
         abort(404)
-
-
-
-
-
 
     # {
     #     "title": "Memory",
